@@ -1,11 +1,9 @@
-use std::num::ParseFloatError;
 use crate::endpoints::payment::AmountUnitFloatError;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
-use url::form_urlencoded::parse;
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone, Copy, strum_macros::AsRefStr)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "UPPERCASE")]
 #[allow(missing_docs)]
 pub enum PaymentType {
     Card,
@@ -13,7 +11,6 @@ pub enum PaymentType {
 }
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone, Copy, strum_macros::AsRefStr)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[allow(missing_docs)]
 pub enum DeliveryMethodType {
     #[serde(rename = "Pharmaceutical")]
@@ -25,18 +22,26 @@ pub enum DeliveryMethodType {
 #[derive(
     Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, Copy, strum_macros::AsRefStr,
 )]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING-KEBAB-CASE")]
 #[allow(missing_docs)]
 pub enum TerminalType {
     #[default]
-    #[serde(rename = "WEB")]
     Web,
-    #[serde(rename = "WAP")]
     Wap,
-    #[serde(rename = "APP")]
     App,
-    #[serde(rename = "MINI-APP")]
     MiniApp,
+}
+
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone, strum_macros::AsRefStr)]
+#[serde(rename_all = "lowercase")]
+#[allow(missing_docs)]
+pub enum PaymentStatus {
+    Succeeded,
+    Pending,
+    Refunded,
+    Failed,
+    #[serde(untagged)]
+    Custom(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -168,7 +173,7 @@ pub struct OrderData {
     /// Delivery information, including recipient (name, phone number, email, and delivery
     /// address) information, as well as delivery service provider information.
     #[builder(default, setter(strip_option, into))]
-    pub shipping: Option<Shipping>,
+    pub shipping: Option<ShippingDetails>,
 }
 
 /// Up to 100 can be included
@@ -227,7 +232,7 @@ pub struct ItemLine {
 
 /// Customize source data to be represented as key/value
 #[serde_with::skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, TypedBuilder)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TypedBuilder)]
 pub struct Metadata {
     #[builder(default, setter(strip_option, into))]
     pub domain: Option<String>,
@@ -253,10 +258,12 @@ pub struct PaymentMethod {
 #[derive(Debug, Clone, Serialize, Deserialize, TypedBuilder)]
 pub struct PaymentData {
     #[builder(default, setter(strip_option, into))]
-    pub billing_address: Option<Address>,
+    #[serde(rename = "billing_address")]
+    pub address: Option<Address>,
 
     #[builder(default, setter(strip_option, into))]
-    pub card_holder_name: Option<PersonName>,
+    #[serde(rename = "card_holder_name")]
+    pub name: Option<PersonName>,
 
     /// Bank card number
     #[builder(setter(into))]
@@ -293,31 +300,36 @@ pub struct PaymentData {
 /// address) information, as well as delivery service provider information.
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, TypedBuilder)]
-pub struct Shipping {
+pub struct ShippingDetails {
     /// Delivery service providers for physical products, such as FedEx, UPS, or USPS.
     #[builder(default, setter(strip_option, into))]
     pub carrier: Option<String>,
 
     /// Customer email
+    #[serde(default)]
     #[builder(setter(into))]
     pub email: String,
 
     /// Customer's mobile phone number
+    #[serde(default)]
     #[builder(setter(into))]
     pub phone: String,
 
+    #[serde(default, rename = "shipping_address")]
     #[builder(setter(into))]
-    pub shipping_address: Address,
+    pub address: Address,
 
+    #[serde(default, rename = "shipping_name")]
     /// The name of the payee.
     #[builder(setter(into))]
-    pub shipping_name: PersonName,
+    pub name: PersonName,
 }
 
 #[serde_with::skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, TypedBuilder)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TypedBuilder)]
 pub struct Address {
     /// Address line 1, such as street address, post office box, and company name.
+    #[serde(default)]
     #[builder(setter(into))]
     pub address1: String,
 
@@ -326,40 +338,47 @@ pub struct Address {
     pub address2: Option<String>,
 
     /// City, district, suburb, town or village name.
+    #[serde(default)]
     #[builder(setter(into))]
     pub city: String,
 
     /// Two letter country or region code.
     /// For more information, please refer to the ISO 3166 national code standard.
+    #[serde(default)]
     #[builder(setter(into))]
     pub country: String,
 
     /// For credit card payments, if your business entity is located in the United States and
     /// your bank card is issued in Canada, the United States, or the United Kingdom, please set
     /// a region code that follows the ISO 3611-2 standard and contains two to three characters.
+    #[serde(default)]
     #[builder(setter(into))]
     pub state: String,
 
     /// Postal code or ZIP code.
+    #[serde(default)]
     #[builder(setter(into))]
     pub zip_code: String,
 }
 
 /// The name of the payee.
 #[serde_with::skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, TypedBuilder)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TypedBuilder)]
 pub struct PersonName {
     /// first name
+    #[serde(default)]
     #[builder(setter(into))]
     pub first_name: String,
 
-    /// full name
-    #[builder(setter(into))]
-    pub full_name: String,
-
     /// surname
+    #[serde(default)]
     #[builder(setter(into))]
     pub last_name: String,
+
+    /// full name
+    #[serde(default)]
+    #[builder(setter(into))]
+    pub full_name: String,
 }
 
 /// Payment amount
@@ -376,6 +395,74 @@ pub struct Amount {
     /// parameter to 100
     #[builder(setter(into))]
     pub value: AmountUnit,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PaymentDataSummary {
+    Paypal(PaymentPaypalSummary),
+    #[serde(untagged)]
+    Card(PaymentCardSummary),
+    // #[serde(untagged)]
+    // Unknown(serde_json::Value),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaymentMethodSummary {
+    #[serde(rename = "payment_data")]
+    pub data: PaymentDataSummary,
+
+    /// The payment method types included in the payment method options.
+    pub payment_type: PaymentType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderSummary {
+    /// Unique identifier of the DianDian system
+    pub id: String,
+
+    /// The unique ID for identifying orders is assigned by the merchants who directly provide
+    /// services or goods to customers. This field is used for displaying users' consumption
+    /// records as well as for other further operations such as dispute tracking or handling
+    /// customer complaints.
+    pub merchant_order_id: String,
+
+    /// The payment method used by merchants or acquiring institutions for receiving payments.
+    pub payment_method: PaymentMethodSummary,
+
+    /// Payment status
+    pub payment_status: PaymentStatus,
+
+    /// The proportion of acquiring merchants
+    #[serde(rename = "payment_amount")]
+    pub gross_amount: Amount,
+
+    /// Total refund amount
+    pub refunded_amount: Option<AmountUnit>,
+
+    /// Transaction fee
+    pub transaction_fee: Option<AmountUnit>,
+
+    /// Delivery information, including the recipient's details (name, phone number, email
+    /// address and delivery address), as well as information about the delivery service provider.
+    pub shipping: Option<ShippingDetails>,
+
+    /// Is there any dispute regarding the order
+    #[serde(default)]
+    pub is_dispute: bool,
+
+    /// Reason for failure
+    pub failure_reason: Option<String>,
+
+    /// Custom source data (in the form of key/value pairs)
+    #[serde(default)]
+    pub metadata: Metadata,
+
+    /// The latest update time of the order
+    pub update_at: chrono::DateTime<chrono::Utc>,
+
+    /// Creation Date
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl From<(&str, AmountUnit)> for Amount {
@@ -423,4 +510,46 @@ impl From<usize> for AmountUnit {
     fn from(v: usize) -> Self {
         AmountUnit(v as u64)
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaymentPaypalSummary {
+    pub payer: PaypalPayerDetails,
+    pub shipping: PaypalShippingDetails,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaypalPayerDetails {
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub phone: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaypalShippingDetails {
+    pub full_name: Option<String>,
+
+    pub address1: String,
+    pub address2: Option<String>,
+    pub city: String,
+    pub country: String,
+    pub state: String,
+    pub zip_code: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaymentCardSummary {
+    /// Card BIN
+    pub card_bin: String,
+
+    /// Expiry month
+    pub expiry_month: String,
+
+    /// Maturity year
+    pub expiry_year: String,
+
+    /// The last four digits of the card
+    #[serde(rename = "last4")]
+    pub last_four: String,
 }

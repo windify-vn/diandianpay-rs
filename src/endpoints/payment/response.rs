@@ -1,7 +1,6 @@
-use serde::de::DeserializeOwned;
-use serde::Deserialize;
-use crate::endpoints::payment::schema::{AmountUnit, NextAction};
+use crate::endpoints::payment::schema::{AmountUnit, NextAction, OrderSummary};
 use crate::framework::response::{ApiResponse, JsonResult};
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreatePaymentResponse {
@@ -20,7 +19,13 @@ pub struct CreatePaymentResponse {
     /// Currency code, the value is a three digit currency code that follows the ISO 4217 standard.
     pub currency: String,
 
-    pub next_action: Option<NextAction>
+    pub next_action: Option<NextAction>,
 }
 
 impl JsonResult for ApiResponse<CreatePaymentResponse> {}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct QueryPaymentResponse {
+    pub order: OrderSummary,
+}
+impl JsonResult for ApiResponse<QueryPaymentResponse> {}

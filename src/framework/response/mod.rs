@@ -6,13 +6,14 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, Clone, strum_macros::AsRefStr)]
-#[serde(untagged, rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "UPPERCASE")]
 #[allow(missing_docs)]
 pub enum ApiResultCode {
     Succeeded,
     #[default]
     Failed,
     Pending,
+    #[serde(untagged)]
     Custom(String),
 }
 
@@ -43,9 +44,11 @@ pub struct ApiData<T> {
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq, Eq, Clone)]
 pub struct ApiResultMessage {
     #[serde(rename = "result_code")]
-    pub code: ApiResultCode,
-    #[serde(default, rename = "result_status")]
-    pub status: ApiResultStatus,
+    pub code: Option<ApiResultCode>,
+
+    #[serde(rename = "result_status")]
+    pub status: Option<ApiResultStatus>,
+
     #[serde(rename = "result_message")]
     pub message: Option<String>,
 }
