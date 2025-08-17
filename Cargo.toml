@@ -9,7 +9,7 @@ keywords = ["diandianpay", "api", "client"]
 categories = ["api-bindings", "web-programming::http-client"]
 
 [features]
-default = ["default-tls"]
+default = ["default-tls", "blocking"]
 blocking = ["reqwest/blocking"]
 default-tls = ["reqwest/default-tls"]
 rustls-tls = ["reqwest/rustls-tls"]
@@ -24,8 +24,6 @@ chrono = { version = "0.4", default-features = false, features = [
     "serde",
     "std"
 ] }
-
-uuid = { version = "1.18", default-features = false, features = ["serde", "fast-rng", "v7", "std"]}
 
 base64 = "0.22"
 
